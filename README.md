@@ -1,2 +1,4 @@
 # mailssh
-An automated email reply bot powered by AI
+邮箱机器人，每60秒拉取邮件，并利用AI模型依次生成回复。
+
+你可以替换kalts.txt来定制机器人的人设。默认为凯尔希的人设。
