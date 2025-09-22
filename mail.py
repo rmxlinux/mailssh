@@ -10,7 +10,7 @@ import re
 import ssl
 import socket
 
-class mail():
+class mail:
     def __init__(self):
         self.server = None
         self.reconnect()
@@ -22,9 +22,10 @@ class mail():
             except:
                 pass
         try:
-            self.server = IMAPClient("imap.126.com", ssl=True, port=993)
-            self.server.login("remote_test@126.com", base64.b64decode(password.pwd().content()).decode('utf-8'))
-            self.server.id_({'name': 'rmxlinux_mail', 'version': '1.0', 'vendor': 'rmxlinux'})
+            self.imap, self.port, self.user = password.pwd().imap()
+            self.server = IMAPClient(self.imap, ssl=True, port=self.port)
+            self.server.login(self.user, base64.b64decode(password.pwd().content()).decode('utf-8'))
+            self.server.id_(password.pwd().id())
             self.server.select_folder("INBOX")
             return True
 
@@ -135,7 +136,8 @@ class mail():
                 messages = self.server.search(["UNSEEN"])
             else:
                 messages = self.server.search(["ALL"])
-        except (ssl.SSLEOFError, ConnectionResetError, socket.error) as e:
+        except Exception as e:#(ssl.SSLEOFError, ConnectionResetError, socket.error) as e:
+            print(f'Disconnected. {e} Now try to reconnect')
             if self.reconnect():
                 return self.pull_mail_list(israw, istest)  # 重试
             else:
@@ -167,13 +169,14 @@ class mail():
     def quit(self):
         self.server.logout()
 
-class send():
+class send:
     def __init__(self):
+        self.host, self.port, self.user = password.pwd().smtp()
         self.yag = yagmail.SMTP(
-            user="remote_test@126.com",
+            user=self.user,
             password=base64.b64decode(password.pwd().content()).decode('utf-8'),
-            host='smtp.126.com',
-            port=465,
+            host=self.host,
+            port=self.port,
             smtp_starttls=False,
             smtp_ssl=True
         )
