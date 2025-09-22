@@ -4,6 +4,7 @@ import base64
 import time
 from openai import OpenAI
 import re
+import console
 
 polling_delay = 60.0
 
@@ -31,6 +32,14 @@ class bot:
         self.send = mail.send()
         self.api_key = base64.b64decode(password.pwd().api()).decode('utf-8')
         self.ai = gpt(self.api_key)
+        self.consoles = {}
+
+    def findcon(self, mail):
+        if mail.strip() not in self.consoles:
+            self.consoles[mail.strip()] = console.console()
+        return self.consoles[mail.strip()]
+    def familiar(self, mail):
+        self.consoles[mail].is_first = False
 
     def extract(self, header):
         match = re.search(r'<([^>]+)>', header)
@@ -41,7 +50,9 @@ class bot:
 
     def makeprompt(self, query):
         system = ""
-        with open('kalts.txt', 'r', encoding='utf-8', errors='ignore') as f:
+        who = self.extract(query["from"]).strip()
+        console = self.findcon(who)
+        with open(f'{console.which()}.txt', 'r', encoding='utf-8', errors='ignore') as f:
             system = f.read()
 
         system = system.replace('{users}', query["from"])
@@ -53,10 +64,21 @@ class bot:
                 query = self.mail.pull_mail_list(istest=False)
                 if query:
                     for q in query:
-                        prompt = self.makeprompt(q)
-                        reply = self.ai.make(prompt, f"主题：{q['subject']}\n\n{q['content']}")
-                        self.send.send(self.extract(q['from']), f'Re: {q["subject"]}', reply)
-                        print(reply)
+                        who = self.extract(q["from"]).strip()
+                        console = self.findcon(who)
+                        isspecial, results = console.refresh(q['content'])
+                        if not isspecial:
+                            prompt = self.makeprompt(q)
+                            reply = self.ai.make(prompt, f"主题：{q['subject']}\n\n{q['content']}")
+                            print(reply)
+                        else:
+                            reply = '\n'.join(results)
+                            print(reply)
+
+                        self.send.send(who, f'Re: {q["subject"]}', reply)
+                        if console.is_first:
+                            self.send.send(who, f'使用教程', console.tutor())
+                            self.familiar(who)
 
                 time.sleep(polling_delay)
 

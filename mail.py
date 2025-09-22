@@ -157,7 +157,13 @@ class mail:
                 content = self.get_mail_content(email_msg, raw_email_bytes) if email_msg else self.extract_content_from_raw(
                     raw_email_bytes)
 
-                now_content = re.sub(r'<[^>]*>', '', content.replace('<br>','\n')) if israw else content
+                now_content = re.sub(r'<[^>]*>', '\n', content)
+                now_content = '\n'.join(
+                    line.strip()
+                    for line in now_content.split('\n')
+                    if line.strip()
+                )
+
                 ml.append( {
                     "subject": subject,
                     "from": from_,
